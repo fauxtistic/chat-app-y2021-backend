@@ -1,0 +1,79 @@
+import {
+  ConnectedSocket,
+  MessageBody,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+} from '@nestjs/websockets';
+import { Socket } from 'socket.io';
+import { ChatService } from '../../core/services/chat.service';
+import { WelcomeDto } from '../dtos/welcome.dto';
+import {
+  IChatService,
+  IChatServiceProvider,
+} from '../../core/primary-ports/chat.service.interface';
+import { Inject } from '@nestjs/common';
+
+@WebSocketGateway()
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  constructor(
+    @Inject(IChatServiceProvider) private chatService: IChatService,
+  ) {}
+
+  @WebSocketServer() server;
+
+  @SubscribeMessage('message')
+  handleChatEvent(
+    @MessageBody() message: string,
+    @ConnectedSocket() client: Socket,
+  ): void {
+    const chatMessage = this.chatService.newMessage(message, client.id);
+    this.server.emit('newMessage', chatMessage);
+  }
+
+  @SubscribeMessage('typing')
+  handleTypingEvent(
+    @MessageBody() typing: boolean,
+    @ConnectedSocket() client: Socket,
+  ): void {
+    const chatClient = this.chatService.updateTyping(typing, client.id);
+    if (chatClient) {
+      this.server.emit('clientTyping', chatClient);
+    }
+  }
+
+  @SubscribeMessage('name')
+  handleNameEvent(
+    @MessageBody() name: string,
+    @ConnectedSocket() client: Socket,
+  ): void {
+    try {
+      const chatClient = this.chatService.newClient(client.id, name);
+      const welcome: WelcomeDto = {
+        client: chatClient,
+        clients: this.chatService.getClients(),
+        messages: this.chatService.getMessages(),
+      };
+      // emit that individual client
+      client.emit('welcome', welcome);
+      // emit all so everyone listening will get message
+      this.server.emit('clients', this.chatService.getClients());
+    } catch (e) {
+      client.error(e.message);
+    }
+  }
+
+  handleConnection(client: Socket, ...args: any[]): any {
+    client.emit('AllMessages', this.chatService.getMessages());
+    this.server.emit('clients', this.chatService.getClients());
+  }
+
+  handleDisconnect(client: Socket): any {
+    const chatClient = this.chatService.updateTyping(false, client.id);
+    this.server.emit('clientTyping', chatClient);
+    this.chatService.deleteClient(client.id);
+    this.server.emit('clients', this.chatService.getClients());
+  }
+}
