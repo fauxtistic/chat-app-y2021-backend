@@ -5,7 +5,7 @@ export const IChatServiceProvider = 'IChatServiceProvider';
 export interface IChatService {
   newMessage(message: string, senderId: string): ChatMessage;
 
-  newClient(id: string, name: string): ChatClient;
+  newClient(id: string, name: string): Promise<ChatClient>;
 
   getClients(): ChatClient[];
 

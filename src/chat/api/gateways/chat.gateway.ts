@@ -50,16 +50,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ): void {
     try {
-      const chatClient = this.chatService.newClient(client.id, name);
-      const welcome: WelcomeDto = {
-        client: chatClient,
-        clients: this.chatService.getClients(),
-        messages: this.chatService.getMessages(),
-      };
-      // emit that individual client
-      client.emit('welcome', welcome);
-      // emit all so everyone listening will get message
-      this.server.emit('clients', this.chatService.getClients());
+      this.chatService.newClient(client.id, name).then((chatClient) => {
+        const welcome: WelcomeDto = {
+          client: chatClient,
+          clients: this.chatService.getClients(),
+          messages: this.chatService.getMessages(),
+        };
+        // emit that individual client
+        client.emit('welcome', welcome);
+        // emit all so everyone listening will get message
+        this.server.emit('clients', this.chatService.getClients());
+      });
     } catch (e) {
       client.error(e.message);
     }
