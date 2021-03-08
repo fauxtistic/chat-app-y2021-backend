@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ChatModule } from './chat/api/chat.module';
 import { DatabaseModule } from './chat/infrastructure/data-source/postgres/database.module';
-import Joi from '@hapi/joi';
+import * as Joi from '@hapi/joi';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
     ChatModule,
-    DatabaseModule,
     ConfigModule.forRoot({
       validationSchema: Joi.object({
         POSTGRES_HOST: Joi.string().required(),
@@ -18,6 +17,7 @@ import { ConfigModule } from '@nestjs/config';
         PORT: Joi.number(),
       }),
     }),
+    DatabaseModule,
   ],
   controllers: [],
   providers: [],
