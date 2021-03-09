@@ -28,33 +28,34 @@ export class ChatService implements IChatService {
   }
 
   async newClient(id: string, name: string): Promise<ChatClient> {
-    let chatClient = this.clients.find((c) => c.name === name && c.id === id);
-    if (chatClient) {
-      return of(chatClient).toPromise();
+    const clientDb = await this.clientRepository.findOne({ name: name });
+    if (!clientDb) {
+      let client = this.clientRepository.create();
+      client.id = id;
+      client.name = name;
+      client = await this.clientRepository.save(client);
+      return { id: client.id, name: client.name, typing: false };
     }
-    if (this.clients.find((c) => c.name === name)) {
+    if (clientDb.id === id) {
+      // mapping chatcliententity to chatclient
+      return { id: clientDb.id, name: clientDb.name, typing: false };
+    } else {
       throw new Error('Name already used!');
     }
-    /*chatClient = { id: id, name: name, typing: false };
-    this.clients.push(chatClient);
-    return chatClient;*/
-    const client = this.clientRepository.create();
-    client.name = name;
-    await this.clientRepository.save(client);
-    chatClient = { name: name, id: '' + client.id, typing: false };
-    return of(chatClient).toPromise();
   }
 
-  getClients(): ChatClient[] {
-    return this.clients;
+  async getClients(): Promise<ChatClient[]> {
+    const clients = await this.clientRepository.find();
+    const chatClients: ChatClient[] = JSON.parse(JSON.stringify(clients));
+    return chatClients;
   }
 
   getMessages(): ChatMessage[] {
     return this.allMessages;
   }
 
-  deleteClient(id: string): void {
-    this.clients = this.clients.filter((c) => c.id !== id);
+  async deleteClient(id: string): Promise<void> {
+    await this.clientRepository.delete({ id: id });
   }
 
   updateTyping(typing: boolean, id: string): ChatClient {

@@ -45,36 +45,38 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('name')
-  handleNameEvent(
+  async handleNameEvent(
     @MessageBody() name: string,
     @ConnectedSocket() client: Socket,
-  ): void {
+  ): Promise<void> {
     try {
-      this.chatService.newClient(client.id, name).then((chatClient) => {
-        const welcome: WelcomeDto = {
-          client: chatClient,
-          clients: this.chatService.getClients(),
-          messages: this.chatService.getMessages(),
-        };
-        // emit that individual client
-        client.emit('welcome', welcome);
-        // emit all so everyone listening will get message
-        this.server.emit('clients', this.chatService.getClients());
-      });
+      const chatClient = await this.chatService.newClient(client.id, name);
+      const chatClients = await this.chatService.getClients();
+      const welcome: WelcomeDto = {
+        client: chatClient,
+        clients: chatClients,
+        messages: this.chatService.getMessages(),
+      };
+      // emit that individual client
+      client.emit('welcome', welcome);
+      // emit all so everyone listening will get message
+      this.server.emit('clients', chatClients);
     } catch (e) {
       client.error(e.message);
     }
   }
 
-  handleConnection(client: Socket, ...args: any[]): any {
+  async handleConnection(client: Socket, ...args: any[]): Promise<any> {
     client.emit('AllMessages', this.chatService.getMessages());
-    this.server.emit('clients', this.chatService.getClients());
+    this.server.emit('clients', await this.chatService.getClients());
   }
 
-  handleDisconnect(client: Socket): any {
+  async handleDisconnect(client: Socket): Promise<any> {
+    //fix below
     const chatClient = this.chatService.updateTyping(false, client.id);
     this.server.emit('clientTyping', chatClient);
-    this.chatService.deleteClient(client.id);
-    this.server.emit('clients', this.chatService.getClients());
+    //fix above
+    await this.chatService.deleteClient(client.id);
+    this.server.emit('clients', await this.chatService.getClients());
   }
 }
