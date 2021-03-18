@@ -3,15 +3,15 @@ import { ChatClient } from '../models/chat-client.model';
 
 export const IChatServiceProvider = 'IChatServiceProvider';
 export interface IChatService {
-  newMessage(message: string, senderId: string): ChatMessage;
+  newMessage(message: string, senderId: string): Promise<ChatMessage>;
 
   newClient(id: string, name: string): Promise<ChatClient>;
 
   getClients(): Promise<ChatClient[]>;
 
-  getMessages(): ChatMessage[];
+  getMessages(): Promise<ChatMessage[]>;
 
   deleteClient(id: string): Promise<void>;
 
-  updateTyping(typing: boolean, id: string): ChatClient;
+  updateTyping(typing: boolean, id: string): Promise<ChatClient>;
 }

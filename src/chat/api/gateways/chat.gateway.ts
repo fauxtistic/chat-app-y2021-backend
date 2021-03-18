@@ -25,20 +25,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server;
 
   @SubscribeMessage('message')
-  handleChatEvent(
+  async handleChatEvent(
     @MessageBody() message: string,
     @ConnectedSocket() client: Socket,
-  ): void {
-    const chatMessage = this.chatService.newMessage(message, client.id);
+  ): Promise<void> {
+    const chatMessage = await this.chatService.newMessage(message, client.id);
     this.server.emit('newMessage', chatMessage);
   }
 
   @SubscribeMessage('typing')
-  handleTypingEvent(
+  async handleTypingEvent(
     @MessageBody() typing: boolean,
     @ConnectedSocket() client: Socket,
-  ): void {
-    const chatClient = this.chatService.updateTyping(typing, client.id);
+  ): Promise<void> {
+    const chatClient = await this.chatService.updateTyping(typing, client.id);
     if (chatClient) {
       this.server.emit('clientTyping', chatClient);
     }
@@ -52,10 +52,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const chatClient = await this.chatService.newClient(client.id, name);
       const chatClients = await this.chatService.getClients();
+      const messages = await this.chatService.getMessages();
       const welcome: WelcomeDto = {
         client: chatClient,
         clients: chatClients,
-        messages: this.chatService.getMessages(),
+        messages: messages,
       };
       // emit that individual client
       client.emit('welcome', welcome);
@@ -73,7 +74,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleDisconnect(client: Socket): Promise<any> {
     //fix below
-    const chatClient = this.chatService.updateTyping(false, client.id);
+    const chatClient = await this.chatService.updateTyping(false, client.id);
     this.server.emit('clientTyping', chatClient);
     //fix above
     await this.chatService.deleteClient(client.id);

@@ -7,4 +7,7 @@ export class ChatClientEntity {
 
   @Column({ unique: true })
   name: string;
+
+  @Column()
+  typing: boolean;
 }
